@@ -11,8 +11,7 @@ from pro_implementation.answer import answer_question, fetch_context
 
 load_dotenv(override=True)
 
-# LiteLLM treats "openai/..." as the OpenAI provider; Groq needs the groq/ prefix. MODEL = "openai/gpt-oss-120b"
-MODEL = "groq/openai/gpt-oss-120b"
+MODEL = "openai/gpt-5.4-mini"
 db_name = "vector_db"
 
 
@@ -159,7 +158,7 @@ Provide detailed feedback and scores from 1 (very poor) to 5 (ideal) for each di
         model=MODEL,
         messages=judge_messages,
         response_format=AnswerEval,
-        api_key=os.getenv("GROQ_API_KEY"),
+        api_key=os.getenv("OPENAI_API_KEY"),
     )
 
     answer_eval = AnswerEval.model_validate_json(judge_response.choices[0].message.content)

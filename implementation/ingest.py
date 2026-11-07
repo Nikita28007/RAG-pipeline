@@ -9,7 +9,7 @@ from langchain_openai import OpenAIEmbeddings
 
 from dotenv import load_dotenv
 
-MODEL = "gpt-4.1-nano"
+MODEL = "gpt-5.4-nano"
 
 DB_NAME = str(Path(__file__).parent.parent / "vector_db")
 KNOWLEDGE_BASE = str(Path(__file__).parent.parent / "knowledge-base")

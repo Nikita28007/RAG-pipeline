@@ -11,8 +11,7 @@ from pro_implementation.security import neutralize_markup
 from pro_implementation.hybrid import Bm25Index, reciprocal_rank_fusion
 load_dotenv(override=True)
 
-# MODEL = "openai/gpt-4.1-nano"
-MODEL = "groq/openai/gpt-oss-120b"
+MODEL = "openai/gpt-5.4-mini"
 DB_NAME = str(Path(__file__).parent.parent / "preprocessed_db")
 KNOWLEDGE_BASE_PATH = Path(__file__).parent.parent / "knowledge-base"
 SUMMARIES_PATH = Path(__file__).parent.parent / "summaries"

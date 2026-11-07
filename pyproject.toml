@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "chromadb>=1.5.9",
-    "gradio<6",
+    "gradio>=6.31.0",
     "litellm>=1.108.2",
     "openai>=3.46.0",
     "pandas>=3.1.1",

@@ -29,7 +29,7 @@ Context:
 
 vectorstore = Chroma(persist_directory=DB_NAME, embedding_function=embeddings)
 retriever = vectorstore.as_retriever()
-llm = ChatOpenAI(temperature=0, model_name=MODEL, api_key=os.getenv("GROQ_API_KEY"), base_url="https://api.groq.com/openai/v1")
+llm = ChatOpenAI(temperature=0, model_name=MODEL, api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def fetch_context(question: str) -> list[Document]:

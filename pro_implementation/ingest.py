@@ -6,23 +6,33 @@ from chromadb import PersistentClient
 from tqdm import tqdm
 from litellm import completion
 from multiprocessing import Pool
-from tenacity import retry, stop_after_attempt, wait_exponential
+
+from litellm.exceptions import (
+    AuthenticationError,
+    BadRequestError,
+    NotFoundError,
+    PermissionDeniedError,
+)
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_exponential
 from pro_implementation.security import find_injection_patterns
 
 load_dotenv(override=True)
 
-MODEL = "openai/gpt-4.1-nano"
+MODEL = "openai/gpt-5.4-nano"
 
 DB_NAME = str(Path(__file__).parent.parent / "preprocessed_db")
 collection_name = "docs"
 embedding_model = "text-embedding-3-large"
 KNOWLEDGE_BASE_PATH = Path(__file__).parent.parent / "knowledge-base"
 AVERAGE_CHUNK_SIZE = 100
+BATCH_SIZE = 2048
+PERMANENT_ERRORS = (NotFoundError, AuthenticationError, PermissionDeniedError, BadRequestError)
 wait = wait_exponential(multiplier=1, min=10, max=240)
 
 retry_llm = retry(
     wait=wait_exponential(multiplier=1, min=10, max=240),
     stop=stop_after_attempt(5),
+    retry=retry_if_not_exception_type(PERMANENT_ERRORS),
     reraise=True,
 )
 
@@ -113,6 +123,37 @@ def process_document(document):
     doc_as_chunks = Chunks.model_validate_json(reply).chunks
     return [chunk.as_result(document) for chunk in doc_as_chunks]
 
+class IngestError(RuntimeError):
+    """Plain, picklable error that carries the original failure across processes."""
+
+def process_document_safe(document):
+    """Worker entry point.
+
+    litellm exceptions cannot be unpickled in the parent process (their __init__ needs
+    extra arguments), which hides the real error behind a TypeError. Converting the
+    failure to a plain error keeps the original message visible.
+    """
+    try:
+        return process_document(document)
+    except Exception as e:
+        raise IngestError(f"{document['source']}: {type(e).__name__}: {e}") from None
+
+
+def preflight():
+    """Fail fast with the real error before paying for every document."""
+    try:
+        completion(model=MODEL, messages=[{"role": "user", "content": "ping"}])
+    except Exception as e:
+        raise SystemExit(
+            f"Chunking model '{MODEL}' is not usable: {type(e).__name__}: {e}\n"
+            "Set INGEST_MODEL to a model your API key can access."
+        ) from None
+    try:
+        openai.embeddings.create(model=embedding_model, input=["ping"])
+    except Exception as e:
+        raise SystemExit(
+            f"Embedding model '{embedding_model}' is not usable: {type(e).__name__}: {e}"
+        ) from None
 
 def create_chunks(documents):
     """
@@ -121,7 +162,7 @@ def create_chunks(documents):
     """
     chunks = []
     with Pool(processes=WORKERS) as pool:
-        for result in tqdm(pool.imap_unordered(process_document, documents), total=len(documents)):
+        for result in tqdm(pool.imap_unordered(process_document_safe, documents), total=len(documents)):
             chunks.extend(result)
     return chunks
 
@@ -142,7 +183,15 @@ def create_embeddings(chunks):
         chroma.delete_collection(collection_name)
 
     texts = [chunk.page_content for chunk in chunks]
-    emb = openai.embeddings.create(model=embedding_model, input=texts).data
+
+    
+    all_embeddings = []
+    for i in range(0, len(texts), BATCH_SIZE):
+        batch = texts[i : i + BATCH_SIZE]
+        batch_emb = openai.embeddings.create(model=embedding_model, input=batch).data
+        all_embeddings.extend(batch_emb)
+    emb = all_embeddings
+
     vectors = [e.embedding for e in emb]
 
     collection = chroma.get_or_create_collection(collection_name)
@@ -155,6 +204,7 @@ def create_embeddings(chunks):
 
 
 if __name__ == "__main__":
+    preflight()
     documents = fetch_documents()
     chunks = create_chunks(documents)
     report_suspicious_chunks(chunks)
