@@ -8,7 +8,7 @@ The pipeline combines LLM-based chunking, query rewriting, dual-query vector ret
 
 ## RAG chat
 
-![dashboar](docs/screenshot.png)
+![dashboar](docs/rag_chat.png)
 
 ## Retrieval Evaluation
 
