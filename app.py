@@ -28,14 +28,12 @@ def main():
 
     theme = gr.themes.Soft(font=["Inter", "system-ui", "sans-serif"])
 
-    with gr.Blocks(title="Insurellm Expert Assistant", theme=theme) as ui:
+    with gr.Blocks(title="Insurellm Expert Assistant") as ui:
         gr.Markdown("# 🏢 Insurellm Expert Assistant\nAsk me anything about Insurellm!")
 
         with gr.Row():
             with gr.Column(scale=1):
-                chatbot = gr.Chatbot(
-                    label="💬 Conversation", height=600, type="messages", show_copy_button=True
-                )
+                chatbot = gr.Chatbot(label="💬 Conversation", height=600, buttons=["copy"])
                 message = gr.Textbox(
                     label="Your Question",
                     placeholder="Ask anything about Insurellm...",
@@ -54,7 +52,7 @@ def main():
             put_message_in_chatbot, inputs=[message, chatbot], outputs=[message, chatbot]
         ).then(chat, inputs=chatbot, outputs=[chatbot, context_markdown])
 
-    ui.launch(inbrowser=True)
+    ui.launch(inbrowser=True, theme=theme)
 
 
 if __name__ == "__main__":

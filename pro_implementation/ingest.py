@@ -6,8 +6,8 @@ from chromadb import PersistentClient
 from tqdm import tqdm
 from litellm import completion
 from multiprocessing import Pool
-from tenacity import retry, wait_exponential
-
+from tenacity import retry, stop_after_attempt, wait_exponential
+from pro_implementation.security import find_injection_patterns
 
 load_dotenv(override=True)
 
@@ -20,6 +20,11 @@ KNOWLEDGE_BASE_PATH = Path(__file__).parent.parent / "knowledge-base"
 AVERAGE_CHUNK_SIZE = 100
 wait = wait_exponential(multiplier=1, min=10, max=240)
 
+retry_llm = retry(
+    wait=wait_exponential(multiplier=1, min=10, max=240),
+    stop=stop_after_attempt(5),
+    reraise=True,
+)
 
 WORKERS = 3
 
@@ -100,7 +105,7 @@ def make_messages(document):
     ]
 
 
-@retry(wait=wait)
+@retry_llm
 def process_document(document):
     messages = make_messages(document)
     response = completion(model=MODEL, messages=messages, response_format=Chunks)
@@ -120,6 +125,16 @@ def create_chunks(documents):
             chunks.extend(result)
     return chunks
 
+
+def report_suspicious_chunks(chunks):
+    """Print chunks that match prompt-injection heuristics. Heuristics can be bypassed."""
+    suspicious = []
+    for chunk in chunks:
+        patterns = find_injection_patterns(chunk.page_content)
+        if patterns:
+            suspicious.append((chunk.metadata["source"], patterns))
+            print(f"WARNING possible prompt injection in {chunk.metadata['source']}: {patterns}")
+    return suspicious
 
 def create_embeddings(chunks):
     chroma = PersistentClient(path=DB_NAME)
@@ -142,5 +157,6 @@ def create_embeddings(chunks):
 if __name__ == "__main__":
     documents = fetch_documents()
     chunks = create_chunks(documents)
+    report_suspicious_chunks(chunks)
     create_embeddings(chunks)
     print("Ingestion complete")

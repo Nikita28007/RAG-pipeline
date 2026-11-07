@@ -174,7 +174,7 @@ def main():
     """Launch the Gradio evaluation app."""
     theme = gr.themes.Soft(font=["Inter", "system-ui", "sans-serif"])
 
-    with gr.Blocks(title="RAG Evaluation Dashboard", theme=theme) as app:
+    with gr.Blocks(title="RAG Evaluation Dashboard") as app:
         gr.Markdown("# 📊 RAG Evaluation Dashboard")
         gr.Markdown("Evaluate retrieval and answer quality for the Insurellm RAG system")
 
@@ -229,7 +229,7 @@ def main():
             outputs=[answer_metrics, answer_chart],
         )
 
-    app.launch(inbrowser=True)
+    app.launch(inbrowser=True, theme=theme)
 
 
 if __name__ == "__main__":
