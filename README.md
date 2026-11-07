@@ -1,3 +1,4 @@
+![CI](https://github.com/Nikita28007/RAG-pipeline/actions/workflows/ci.yml/badge.svg)
 # RAG Assistant
 
 Retrieval-Augmented Generation (RAG) pipeline for question answering over a company knowledge base (not real company Insurellm). It combines LLM-based chunking, query rewriting, dual-query vector retrieval, LLM reranking, and a Gradio chat UI. A separate dashboard measures retrieval and answer quality.
@@ -45,16 +46,16 @@ flowchart TD
 .
 ├── app.py                  # Gradio chat UI
 ├── evaluator.py            # Gradio evaluation dashboard
-├── implementation/
+├── implementation/         # baseline 
 │   ├── ingest.py           # chunking + embedding + vector store creation
 │   └── answer.py           # retrieval, reranking, answer generation
 ├── evaluation/
 │   └── eval.py             # evaluation logic and test set loaders
-├── pro_implementation/     # alternative implementation (see its own files)
+├── pro_implementation/     # alternative implementation 
 ├── knowledge-base/         # source documents (markdown), grouped by type
 │   └── <doc_type>/**/*.md
-├── preprocessed_db/        # ChromaDB storage created by implementation/ingest.py (generated)
-├── vector_db/              # vector store directory (not used by implementation/)
+├── preprocessed_db/        # ChromaDB storage created by pro_implementation/ingest.py
+├── vector_db/              # vector store directory (not used by pro_implementation/)
 └── .env                    # API keys
 ```
 
@@ -112,7 +113,7 @@ The subfolder name is stored as the `type` metadata field.
 ### 2. Build the vector store
 
 ```bash
-python implementation/ingest.py
+python pro_implementation/ingest.py
 ```
 
 This loads all `.md` files, chunks them in parallel, embeds the chunks, and writes them to the `docs` collection in `preprocessed_db/`. An existing collection with the same name is deleted and recreated.
@@ -153,7 +154,7 @@ Results are also broken down by test category in a bar chart.
 
 ## How it works
 
-### Ingestion (`implementation/ingest.py`)
+### Ingestion (`pro_implementation/ingest.py`)
 
 1. `fetch_documents` walks `knowledge-base/` and loads every `.md` file with its type and path.
 2. `process_document` prompts the LLM to split the document into overlapping chunks (about 25% overlap) and returns a validated `Chunks` structure (Pydantic).
@@ -162,7 +163,7 @@ Results are also broken down by test category in a bar chart.
 
 Failed LLM calls are retried with exponential backoff (10 to 240 seconds).
 
-### Answering (`implementation/answer.py`)
+### Answering (`pro_implementation/answer.py`)
 
 1. `rewrite_query` produces a short standalone query from the question and chat history.
 2. `fetch_context` runs vector search for both the original and rewritten question (`RETRIEVAL_K` each), then merges and deduplicates by chunk content.
