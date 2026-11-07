@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
 
 permissions:
@@ -16,13 +16,15 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ci-dummy-key
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync --locked --group dev
       - name: Lint
         run: uv run --no-sync ruff check .
       - name: Test
